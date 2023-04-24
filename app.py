@@ -1,20 +1,44 @@
 from flask import Flask, render_template, request, jsonify
 app = Flask(__name__)
 
+from pymongo import MongoClient
+import certifi
+
+ca = certifi.where();
+
+client = MongoClient('mongodb+srv://haroe:NaMQOAaOxZuDcXgt@cluster0.jbeqc4x.mongodb.net/Cluster0?retryWrites=true&w=majority',tlsCAFile=ca)
+db = client.dbsparta
+
 @app.route('/')
 def home():
-   return render_template('index.html')
+    return render_template('index.html')
 
-@app.route("/movie", methods=["POST"])
-def movie_post():
-    sample_receive = request.form['sample_give']
-    print(sample_receive)
-    return jsonify({'msg':'POST 연결 완료!'})
+@app.route("/bucket", methods=["POST"])
+def bucket_post():
+    bucket_receive = request.form["bucket_give"]
 
-@app.route("/movie", methods=["GET"])
-def movie_get():
-    all_users = list(db.moviess.find({}, {'_id': False}))
-    return jsonify({'msg':'GET 연결 완료!'})
+    bucket_list = list(db.bucket.find({}, {'_id': False}))
+    num = len(bucket_list) + 1
+
+    doc = {
+        'num': num,
+        'bucket': bucket_receive,
+        'done': 0
+    }
+
+    db.bucket.insert_one(doc)
+    return jsonify({'msg': '등록 완료!'})
+
+@app.route("/bucket/done", methods=["POST"])
+def bucket_done():
+    num_receive = request.form['num_give']
+    db.bucket.update_one({'num': int(num_receive)}, {'$set': {'done': 1}})
+    return jsonify({'msg': '버킷완료'})
+
+@app.route("/bucket", methods=["GET"])
+def bucket_get():
+    buckets_list = list(db.bucket.find({},{'_id':False}))
+    return jsonify({'buckets':buckets_list})
 
 if __name__ == '__main__':
-   app.run('0.0.0.0', port=8080, debug=True)
+    app.run('0.0.0.0', port=5001, debug=True)
